@@ -17,7 +17,7 @@ def live(channel_uid):
                 "Referer": "https://www.tvheryerde.com.tr/",
             }
         )
-        url = r.json()["Data"]["StreamData"]["HlsStreamUrl"]
+        return str(r.json())
         return redirect(url)
     except Exception as e:
         return str(e), 500
