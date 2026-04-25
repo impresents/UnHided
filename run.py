@@ -1,25 +1,30 @@
 from flask import Flask, redirect, request
-import subprocess, os, tempfile
+import requests
 
 app = Flask(__name__)
 
-@app.route("/live")
-def live():
-    url = request.args.get("url")
-    if not url:
-        return "url parametresi eksik", 400
-    try:
-        cookies = os.environ.get("YOUTUBE_COOKIES", "")
-        cmd = ["yt-dlp", "-g", "--no-playlist", "-f", "b", url]
-        if cookies:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-                f.write(cookies)
-                cmd += ["--cookies", f.name]
-        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT, timeout=30).decode().strip()
-        stream_url = result.split("\n")[-1]
-        return redirect(stream_url)
-    except subprocess.CalledProcessError as e:
-        return e.output.decode(), 500
+TVH_EMAIL = "email@gmail.com"    # senin mailin
+TVH_PASSWORD = "sifren"          # senin şifren
+
+def get_stream_url(channel_uid):
+    # Login
+    login = requests.post(
+        "https://api.tvheryerde.com/api/auth/login",
+        json={"email": TVH_EMAIL, "password": TVH_PASSWORD}
+    )
+    token = login.json()["Data"]["Token"]
+    
+    # Stream URL al
+    stream = requests.get(
+        f"https://api.tvheryerde.com/api/channel/{channel_uid}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    return stream.json()["Data"]["StreamData"]["HlsStreamUrl"]
+
+@app.route("/live/<channel_uid>")
+def live(channel_uid):
+    url = get_stream_url(channel_uid)
+    return redirect(url)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7860)
