@@ -2,10 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN pip install flask yt-dlp
+RUN apt-get update && apt-get install -y gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY run.py .
+RUN pip install mediaflow-proxy uvicorn
 
 EXPOSE 7860
 
-CMD ["python", "run.py"]
+ENV PORT=7860
+
+CMD ["uvicorn", "mediaflow_proxy.main:app", "--host", "0.0.0.0", "--port", "7860"]
