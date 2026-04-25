@@ -1,30 +1,46 @@
-from flask import Flask, redirect, request
+from flask import Flask, redirect, request, jsonify
 import requests
 
 app = Flask(__name__)
 
-TVH_EMAIL = "email@gmail.com"    # senin mailin
-TVH_PASSWORD = "sifren"          # senin şifren
+API_BASE = "https://core-api.kablowebtv.com/api"
 
-def get_stream_url(channel_uid):
-    # Login
-    login = requests.post(
-        "https://api.tvheryerde.com/api/auth/login",
-        json={"email": TVH_EMAIL, "password": TVH_PASSWORD}
+FIREBASE_API_KEY = "AIzaSyBvHxNGNqP8Q7zA3M6JkXvwQkXJPkFzRtY"  # firebase key
+
+TVH_EMAIL = "EMAIL"      # tvheryerde emailin
+TVH_PASSWORD = "SIFRE"   # tvheryerde şifren
+
+def get_token():
+    # Firebase login
+    r = requests.post(
+        f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}",
+        json={"email": TVH_EMAIL, "password": TVH_PASSWORD, "returnSecureToken": True}
     )
-    token = login.json()["Data"]["Token"]
+    firebase_token = r.json()["idToken"]
     
-    # Stream URL al
-    stream = requests.get(
-        f"https://api.tvheryerde.com/api/channel/{channel_uid}",
+    # kablowebtv login
+    r2 = requests.post(
+        f"{API_BASE}/auth/login",
+        json={"firebaseToken": firebase_token},
+        headers={"Content-Type": "application/json"}
+    )
+    return r2.json()["Data"]["Token"]
+
+def get_stream(channel_uid, token):
+    r = requests.get(
+        f"{API_BASE}/channels/detail?channelUId={channel_uid}",
         headers={"Authorization": f"Bearer {token}"}
     )
-    return stream.json()["Data"]["StreamData"]["HlsStreamUrl"]
+    return r.json()["Data"]["StreamData"]["HlsStreamUrl"]
 
 @app.route("/live/<channel_uid>")
 def live(channel_uid):
-    url = get_stream_url(channel_uid)
-    return redirect(url)
+    try:
+        token = get_token()
+        url = get_stream(channel_uid, token)
+        return redirect(url)
+    except Exception as e:
+        return str(e), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7860)
