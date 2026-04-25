@@ -1,43 +1,23 @@
-from flask import Flask, redirect, request, jsonify
+from flask import Flask, redirect, request
 import requests
 
 app = Flask(__name__)
 
 API_BASE = "https://core-api.kablowebtv.com/api"
-
-FIREBASE_API_KEY = "AIzaSyBvHxNGNqP8Q7zA3M6JkXvwQkXJPkFzRtY"  # firebase key
-
-TVH_EMAIL = "EMAIL"      # tvheryerde emailin
-TVH_PASSWORD = "SIFRE"   # tvheryerde şifren
-
-def get_token():
-    # Firebase login
-    r = requests.post(
-        f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}",
-        json={"email": TVH_EMAIL, "password": TVH_PASSWORD, "returnSecureToken": True}
-    )
-    firebase_token = r.json()["idToken"]
-    
-    # kablowebtv login
-    r2 = requests.post(
-        f"{API_BASE}/auth/login",
-        json={"firebaseToken": firebase_token},
-        headers={"Content-Type": "application/json"}
-    )
-    return r2.json()["Data"]["Token"]
-
-def get_stream(channel_uid, token):
-    r = requests.get(
-        f"{API_BASE}/channels/detail?channelUId={channel_uid}",
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    return r.json()["Data"]["StreamData"]["HlsStreamUrl"]
+TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJjZ2QiOiIwOTNENzIwQS01MDJDLTQxRUQtQTgwRi0yQjgxNjk4NEZCOTUiLCJkaSI6IjcxYzZkZTE5LWExMzAtNGY5Yi04ODFkLTZiMjkzZGExNjk5NyIsImFwdiI6IjEuMC4wIiwiZW52IjoiTElWRSIsImFibiI6IjEwMDAiLCJzcGdkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwIiwiaWNoIjoiMCIsInNnZCI6ImIyNTk1ZjhhLWRlOTUtNDI4MC1hNDU3LTk0ZTA2MmRjZTg1MiIsImlkbSI6IjAiLCJkY3QiOiIzRUY3NSIsImlhIjoiODguMjQzLjY3LjExNyIsImNzaCI6IlRSS1NUIiwiaXBiIjoiMCJ9.7-F3sUNEgPTKRw5FGuHpoRHuCYEbmwkFikqduSQhbf4"  # localStorage'daki shared-token-r1
 
 @app.route("/live/<channel_uid>")
 def live(channel_uid):
     try:
-        token = get_token()
-        url = get_stream(channel_uid, token)
+        r = requests.get(
+            f"{API_BASE}/channels/detail?channelUId={channel_uid}",
+            headers={
+                "Authorization": f"Bearer {TOKEN}",
+                "Origin": "https://www.tvheryerde.com.tr",
+                "Referer": "https://www.tvheryerde.com.tr/",
+            }
+        )
+        url = r.json()["Data"]["StreamData"]["HlsStreamUrl"]
         return redirect(url)
     except Exception as e:
         return str(e), 500
