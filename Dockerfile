@@ -2,13 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y gcc \
-    && rm -rf /var/lib/apt/lists/*
+RUN pip install flask requests
 
-RUN pip install mediaflow-proxy uvicorn
+COPY run.py .
 
 EXPOSE 7860
 
-ENV PORT=7860
-
-CMD ["uvicorn", "mediaflow_proxy.main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["python", "run.py"]
